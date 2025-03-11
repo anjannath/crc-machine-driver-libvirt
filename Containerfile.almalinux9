@@ -1,4 +1,4 @@
-FROM quay.io/almalinuxorg/8-minimal:8
+FROM quay.io/almalinuxorg/9-minimal:9
 
 MAINTAINER CRC team
 
