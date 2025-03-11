@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - "master"
+      - "update-ghactions"
     tags:
       - "*"
   pull_request: {}
@@ -13,17 +14,17 @@ jobs:
       fail-fast: false
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.19
+          go-version: 1.23
       - name: Build
         run: make CONTAINER_RUNTIME="docker"
       - name: Build RPM
         run: make CONTAINER_RUNTIME="docker" test-rpmbuild
       - name: Upload crc-driver-libvirt artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: crc libvirt machine driver
           path: crc-driver-libvirt-centos8

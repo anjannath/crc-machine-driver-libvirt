@@ -27,9 +27,11 @@
 package libvirt
 
 /*
-#cgo pkg-config: libvirt
+#cgo !libvirt_dlopen pkg-config: libvirt
+#cgo libvirt_dlopen LDFLAGS: -ldl
+#cgo libvirt_dlopen CFLAGS: -DLIBVIRT_DLOPEN
 #include <stdlib.h>
-#include "node_device_wrapper.h"
+#include "libvirt_generated.h"
 */
 import "C"
 
@@ -51,6 +53,32 @@ const (
 	NODE_DEVICE_EVENT_DELETED   = NodeDeviceEventLifecycleType(C.VIR_NODE_DEVICE_EVENT_DELETED)
 	NODE_DEVICE_EVENT_DEFINED   = NodeDeviceEventLifecycleType(C.VIR_NODE_DEVICE_EVENT_DEFINED)
 	NODE_DEVICE_EVENT_UNDEFINED = NodeDeviceEventLifecycleType(C.VIR_NODE_DEVICE_EVENT_UNDEFINED)
+)
+
+type NodeDeviceCreateXMLFlags int
+
+const (
+	NODE_DEVICE_CREATE_XML_VALIDATE = NodeDeviceCreateXMLFlags(C.VIR_NODE_DEVICE_CREATE_XML_VALIDATE)
+)
+
+type NodeDeviceDefineXMLFlags int
+
+const (
+	NODE_DEVICE_DEFINE_XML_VALIDATE = NodeDeviceDefineXMLFlags(C.VIR_NODE_DEVICE_DEFINE_XML_VALIDATE)
+)
+
+type NodeDeviceXMLFlags int
+
+const (
+	NODE_DEVICE_XML_INACTIVE = NodeDeviceXMLFlags(C.VIR_NODE_DEVICE_XML_INACTIVE)
+)
+
+type NodeDeviceUpdateFlags int
+
+const (
+	NODE_DEVICE_UPDATE_AFFECT_CURRENT = NodeDeviceUpdateFlags(C.VIR_NODE_DEVICE_UPDATE_AFFECT_CURRENT)
+	NODE_DEVICE_UPDATE_AFFECT_CONFIG  = NodeDeviceUpdateFlags(C.VIR_NODE_DEVICE_UPDATE_AFFECT_CONFIG)
+	NODE_DEVICE_UPDATE_AFFECT_LIVE    = NodeDeviceUpdateFlags(C.VIR_NODE_DEVICE_UPDATE_AFFECT_LIVE)
 )
 
 type NodeDevice struct {
@@ -140,7 +168,7 @@ func (n *NodeDevice) GetName() (string, error) {
 }
 
 // See also https://libvirt.org/html/libvirt-libvirt-nodedev.html#virNodeDeviceGetXMLDesc
-func (n *NodeDevice) GetXMLDesc(flags uint32) (string, error) {
+func (n *NodeDevice) GetXMLDesc(flags NodeDeviceXMLFlags) (string, error) {
 	var err C.virError
 	result := C.virNodeDeviceGetXMLDescWrapper(n.ptr, C.uint(flags), &err)
 	if result == nil {
@@ -195,9 +223,6 @@ func (p *NodeDevice) ListCaps() ([]string, error) {
 
 // See also https://libvirt.org/html/libvirt-libvirt-nodedev.html#virNodeDeviceCreate
 func (p *NodeDevice) Create(flags uint32) error {
-	if C.LIBVIR_VERSION_NUMBER < 7003000 {
-		return makeNotImplementedError("virNodeDeviceCreate")
-	}
 	var err C.virError
 	result := C.virNodeDeviceCreateWrapper(p.ptr, C.uint(flags), &err)
 	if result == -1 {
@@ -208,9 +233,6 @@ func (p *NodeDevice) Create(flags uint32) error {
 
 // See also https://libvirt.org/html/libvirt-libvirt-nodedev.html#virNodeDeviceUndefine
 func (p *NodeDevice) Undefine(flags uint32) error {
-	if C.LIBVIR_VERSION_NUMBER < 7003000 {
-		return makeNotImplementedError("virNodeDeviceUndefine")
-	}
 	var err C.virError
 	result := C.virNodeDeviceUndefineWrapper(p.ptr, C.uint(flags), &err)
 	if result == -1 {
@@ -221,9 +243,6 @@ func (p *NodeDevice) Undefine(flags uint32) error {
 
 // See also https://libvirt.org/html/libvirt-libvirt-network.html#virNodeDeviceGetAutostart
 func (n *NodeDevice) GetAutostart() (bool, error) {
-	if C.LIBVIR_VERSION_NUMBER < 7008000 {
-		return false, makeNotImplementedError("virNodeDeviceGetAutostart")
-	}
 	var out C.int
 	var err C.virError
 	result := C.virNodeDeviceGetAutostartWrapper(n.ptr, (*C.int)(unsafe.Pointer(&out)), &err)
@@ -240,9 +259,6 @@ func (n *NodeDevice) GetAutostart() (bool, error) {
 
 // See also https://libvirt.org/html/libvirt-libvirt-network.html#virNodeDeviceSetAutostart
 func (n *NodeDevice) SetAutostart(autostart bool) error {
-	if C.LIBVIR_VERSION_NUMBER < 7008000 {
-		return makeNotImplementedError("virNodeDeviceSetAutostart")
-	}
 	var cAutostart C.int
 	switch autostart {
 	case true:
@@ -260,9 +276,6 @@ func (n *NodeDevice) SetAutostart(autostart bool) error {
 
 // See also https://libvirt.org/html/libvirt-libvirt-network.html#virNodeDeviceIsActive
 func (n *NodeDevice) IsActive() (bool, error) {
-	if C.LIBVIR_VERSION_NUMBER < 7008000 {
-		return false, makeNotImplementedError("virNodeDeviceIsActive")
-	}
 	var err C.virError
 	result := C.virNodeDeviceIsActiveWrapper(n.ptr, &err)
 	if result == -1 {
@@ -276,9 +289,6 @@ func (n *NodeDevice) IsActive() (bool, error) {
 
 // See also https://libvirt.org/html/libvirt-libvirt-network.html#virNodeDeviceIsPersistent
 func (n *NodeDevice) IsPersistent() (bool, error) {
-	if C.LIBVIR_VERSION_NUMBER < 7008000 {
-		return false, makeNotImplementedError("virNodeDeviceIsPersistent")
-	}
 	var err C.virError
 	result := C.virNodeDeviceIsPersistentWrapper(n.ptr, &err)
 	if result == -1 {
@@ -288,4 +298,16 @@ func (n *NodeDevice) IsPersistent() (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+// See also https://libvirt.org/html/libvirt-libvirt-network.html#virNodeDeviceUpdate
+func (n *NodeDevice) Update(xml string, flags NodeDeviceUpdateFlags) error {
+	cXml := C.CString(xml)
+	defer C.free(unsafe.Pointer(cXml))
+	var err C.virError
+	result := C.virNodeDeviceUpdateWrapper(n.ptr, cXml, C.uint(flags), &err)
+	if result == -1 {
+		return makeError(&err)
+	}
+	return nil
 }

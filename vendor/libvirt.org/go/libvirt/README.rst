@@ -23,9 +23,11 @@ from 1.2.0 onwards, through conditional compilation of newer APIs.
 
 By default the binding will support APIs in libvirt.so, libvirt-qemu.so
 and libvirt-lxc.so. Coverage for the latter two libraries can be dropped
-from the build using build tags 'without_qemu' or 'without_lxc'
+from the build using build tags 'libvirt_without_qemu' or 'libvirt_without_lxc'
 respectively.
 
+The library expects to be used with Go >= 1.11 with Go modules active.
+Older versions are no longer tested, nor is usage without Go modules.
 
 Development status
 ==================
