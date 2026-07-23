@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/crc-org/machine/libmachine/drivers"
@@ -18,6 +19,32 @@ import (
 var (
 	heartbeatTimeout = 10 * time.Second
 )
+
+type loggingListener struct {
+	net.Listener
+}
+
+func (l *loggingListener) Accept() (net.Conn, error) {
+	conn, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	log.WithField("remote", conn.RemoteAddr().String()).Info("RPC connection accepted")
+	return &loggingConn{Conn: conn, start: time.Now()}, nil
+}
+
+type loggingConn struct {
+	net.Conn
+	start time.Time
+}
+
+func (c *loggingConn) Close() error {
+	log.WithFields(log.Fields{
+		"remote":   c.RemoteAddr().String(),
+		"duration": time.Since(c.start),
+	}).Info("RPC connection closed")
+	return c.Conn.Close()
+}
 
 func RegisterDriver(d drivers.Driver) {
 	if os.Getenv(localbinary.PluginEnvKey) != localbinary.PluginEnvVal {
@@ -41,17 +68,44 @@ Please use this plugin through the main 'crc' binary.
 	}
 	rpc.HandleHTTP()
 
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	socketDir := os.Getenv("CRC_SOCKET_DIR")
+	if socketDir == "" {
+		socketDir = filepath.Join(os.TempDir(), "crc-machine")
+	}
+
+	if err := os.MkdirAll(socketDir, 0700); err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating socket directory: %s\n", err)
+		os.Exit(1)
+	}
+	socketDirInfo, err := os.Stat(socketDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error checking socket directory: %s\n", err)
+		os.Exit(1)
+	}
+	if !socketDirInfo.IsDir() || socketDirInfo.Mode().Perm()&0077 != 0 {
+		fmt.Fprintf(os.Stderr, "Socket directory must be owner-only: %s\n", socketDir)
+		os.Exit(1)
+	}
+
+	socketPath := filepath.Join(socketDir, "plugin.sock")
+	os.Remove(socketPath)
+	listener, err := net.Listen("unix", socketPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading RPC server: %s\n", err)
 		os.Exit(1)
 	}
 	defer listener.Close()
+	if err := os.Chmod(socketPath, 0600); err != nil {
+		_ = listener.Close()
+		fmt.Fprintf(os.Stderr, "Error setting socket permissions: %s\n", err)
+		os.Exit(1)
+	}
 
 	fmt.Println(listener.Addr())
 
 	go func() {
-		_ = http.Serve(listener, nil)
+		//#nosec G114 localhost-only RPC server
+		_ = http.Serve(&loggingListener{Listener: listener}, nil)
 	}()
 
 	for {
