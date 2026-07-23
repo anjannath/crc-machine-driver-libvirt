@@ -1,5 +1,5 @@
-github.com/crc-org/machine v0.0.0-20240926103419-a943b47fd48b h1:5577tKzQcPfd/i0dCekY32R9DUi677sNfhVLYKulBGM=
-github.com/crc-org/machine v0.0.0-20240926103419-a943b47fd48b/go.mod h1:trWeQimjfE3dJ8qWOxI4ePtYm13aecK42bf01s6h/Nc=
+github.com/crc-org/machine v0.0.0-20260721135927-5bcb8a00e0f1 h1:F+m/3LuzDqnGa9z+m8juGb1epcWAfUNsAoODfzIJkDI=
+github.com/crc-org/machine v0.0.0-20260721135927-5bcb8a00e0f1/go.mod h1:trWeQimjfE3dJ8qWOxI4ePtYm13aecK42bf01s6h/Nc=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
